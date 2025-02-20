@@ -25,6 +25,7 @@ use tari_template_lib::prelude::*;
 mod tchess {
     use super::*;
     use std::collections::HashSet;
+    use tari_template_lib::rand::random_u32;
 
     pub struct Tchess {
         token: ResourceAddress,
@@ -60,11 +61,7 @@ mod tchess {
                 claimed_games: HashSet::new(),
                 game_template,
             })
-            .with_access_rules(
-                ComponentAccessRules::new()
-                    .add_method_rule("mint", rule!(allow_all))
-                    .default(rule!(non_fungible(owner_key))),
-            )
+            .with_access_rules(ComponentAccessRules::allow_all())
             .create()
         }
 
@@ -75,25 +72,28 @@ mod tchess {
                 .mint_non_fungible(id, &Metadata::new(), &())
         }
 
-        pub fn create_game(&mut self, white: Proof, black: Proof) -> ComponentAddress {
-            white.assert_resource(self.player_badge);
-            black.assert_resource(self.player_badge);
-            let white_id = white
+        pub fn create_game(&mut self, player_a: Proof, player_b: Proof) -> ComponentAddress {
+            player_a.assert_resource(self.player_badge);
+            player_b.assert_resource(self.player_badge);
+            let player_a_id = player_a
                 .get_non_fungibles()
                 .pop_first()
                 .expect("No badge in proof");
-            let black_id = black
+            let player_b_id = player_b
                 .get_non_fungibles()
                 .pop_first()
                 .expect("No badge in proof");
 
-            let white_addr = NonFungibleAddress::new(self.player_badge, white_id);
-            let black_addr = NonFungibleAddress::new(self.player_badge, black_id);
+            let player_a_addr = NonFungibleAddress::new(self.player_badge, player_a_id);
+            let player_b_addr = NonFungibleAddress::new(self.player_badge, player_b_id);
 
-            let component = TemplateManager::get(self.game_template)
-                .call("new_game", args![white_addr, black_addr]);
+            let args = if random_u32() % 2 == 0 {
+                args![player_a_addr, player_b_addr]
+            } else {
+                args![player_b_addr, player_a_addr]
+            };
 
-            component
+            TemplateManager::get(self.game_template).call("new_game", args)
         }
 
         pub fn claim_reward(&mut self, proof: Proof, game: ComponentAddress) -> Bucket {
@@ -106,7 +106,11 @@ mod tchess {
                 .pop_first()
                 .expect("No badge in proof");
             let _auth = proof.authorize();
-            ComponentManager::get(game).invoke("validate_winner", args![id]);
+            let manager = ComponentManager::get(game);
+            if manager.get_template_address() != self.game_template {
+                panic!("Invalid game component. Must be {}", self.game_template);
+            }
+            manager.invoke("validate_winner", args![id]);
             self.claimed_games.insert(game);
             self.token().mint_fungible(100.into())
         }

@@ -3,6 +3,9 @@
   "private": true,
   "version": "0.0.0",
   "type": "module",
+  "engines": {
+    "node": ">=23.8"
+  },
   "scripts": {
     "dev": "vite",
     "build": "tsc -b && vite build",
@@ -12,8 +15,18 @@
   "dependencies": {
     "react": "^19.0.0",
     "react-dom": "^19.0.0",
+    "@tari-project/tari-permissions": "^0.4.0",
     "@tari-project/tarijs": "^0.4.0",
-    "react-chessboard": "^4.7.2"
+    "@tari-project/typescript-bindings": "^1.5.0",
+    "@tari-project/wallet_jrpc_client": "^1.4.0",
+    "@tari-project/wallet-daemon-provider": "^0.4.0",
+    "react-chessboard": "^4.7.2",
+    "chess.js": "^1.0.0",
+    "@mui/icons-material": "5.16.14",
+    "@mui/material": "5.16.14",
+    "@emotion/react": "^11.14.0",
+    "@emotion/styled": "^11.14.0",
+    "zustand": "^5.0.3"
   },
   "devDependencies": {
     "@eslint/js": "^9.19.0",

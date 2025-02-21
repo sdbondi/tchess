@@ -5,9 +5,10 @@ import {Account, TariProvider} from "@tari-project/tarijs";
 import {useEffect, useState} from "react";
 import * as transactions from "./transactions.ts";
 import {findComponentForTemplate, shortenSubstateId} from "./common.ts";
-import {SubstateRequirement} from "@tari-project/tari-provider/dist/types";
-import {submitTransaction, TCHESS_TEMPLATE} from "./transactions.ts";
+import {GAME_TEMPLATE, submitTransaction, TCHESS_TEMPLATE} from "./transactions.ts";
 import {substateIdToString} from "@tari-project/typescript-bindings/src/helpers/helpers.ts";
+import {MenuItem, Select, TextField,} from "@mui/material";
+import * as cbor from './cbor.ts';
 
 export default function SidePanel() {
     const provider = useTariProvider();
@@ -58,7 +59,7 @@ function Onboarding({provider}: { provider: TariProvider }) {
             <p>Account: {account ? shortenSubstateId(account.address) : null}</p>
             <p>League: {gameState.league ? shortenSubstateId(gameState.league) : "None"}</p>
             <p>PlayerId: {gameState.playerNft ? shortenSubstateId(gameState.playerNft) : "None"}</p>
-            <Button>Create game</Button>
+            <p>Game: {gameState.currentGameAddress ? shortenSubstateId(gameState.currentGameAddress) : "None"}</p>
         </div>
     )
 }
@@ -71,6 +72,37 @@ interface Props {
 
 function CreateGame({provider, account, onError}: Props) {
     const gameState = useGameState();
+    const [isBusy, setBusy] = useState(false);
+    const [substates, setSubstates] = useState<any[]>([]);
+
+    useEffect(() => {
+        setBusy(true);
+
+        function extractResource(substateId: string) {
+            const split = substateId.split("_");
+            if (split.length != 4) {
+                return undefined;
+            }
+            if (split[0] !== "nft") {
+                return undefined;
+            }
+            return split[1];
+        }
+
+        const playerNftResx = extractResource(gameState.playerNft!);
+        // TODO: will return all non fungibles?!
+        provider.listSubstates(null, "NonFungible", null, null)
+            .then((substates) => setSubstates(
+                substates.substates
+                    .filter((data) => extractResource(data.substate_id) === playerNftResx))
+            )
+            .catch((e) => onError?.(e))
+            .finally(() => setBusy(false));
+    }, [provider]);
+
+    if (isBusy) {
+        return <div>Loading...</div>
+    }
 
     function onCreateGame() {
         if (!account) {
@@ -86,11 +118,12 @@ function CreateGame({provider, account, onError}: Props) {
             return;
         }
 
-        const transaction = transactions.createGame(account.address, gameState.league, gameState.playerNft);
+
+        const transaction = transactions.createGame(account.address, gameState.league, gameState.playerNft, gameState.currentGameOtherPlayer);
         submitTransaction(provider, account, transaction)
             .then((diff) => {
                 console.log("Game created", diff);
-                const component = findComponentForTemplate(diff, TCHESS_TEMPLATE);
+                const component = findComponentForTemplate(diff, GAME_TEMPLATE);
                 if (!component) {
                     throw new Error("No game created");
                 }
@@ -106,6 +139,18 @@ function CreateGame({provider, account, onError}: Props) {
             <p>Account: {account ? shortenSubstateId(account.address) : null}</p>
             <p>League: {gameState.league ? shortenSubstateId(gameState.league) : "None"}</p>
             <p>PlayerId: {gameState.playerNft ? shortenSubstateId(gameState.playerNft) : "None"}</p>
+
+            {substates?.length ? (
+                <>
+                    <TextField value={gameState.currentGameOtherPlayer}
+                               onChange={(e) => gameState.setCurrentGameOtherPlayer(e.target.value)}/>
+                    <Select defaultValue={substates[0].substate_id} value={gameState.currentGameOtherPlayer}
+                            onChange={(e) => gameState.setCurrentGameOtherPlayer(e.target.value)}>
+                        {substates.map((s, i) => (
+                            <MenuItem key={i} value={s.substate_id}>{s.substate_id.split('_')[3]}</MenuItem>))}
+                    </Select>
+                </>
+            ) : null}
             <Button onClick={onCreateGame}>Create game</Button>
         </div>
     )
@@ -170,7 +215,6 @@ function Register({provider, account, onError}: Props) {
             })
             .catch((e) => onError?.(e))
             .finally(() => setBusy(false));
-
     }
 
     return (

@@ -7,9 +7,10 @@ import {
     UnsignedTransaction
 } from "@tari-project/tarijs";
 import * as wallet from "./wallet.ts";
+import {NonFungibleAddress} from "@tari-project/typescript-bindings";
 
 export const GAME_TEMPLATE = "ad7eee34e6e373613fb7bd0e51a9d49f425ae6e9b54fa8da7bc8cd20dcf5a425";
-export const TCHESS_TEMPLATE = "79f6481ed578b7811b594a3132ab6801d4f81fb88064d9966c4b6cf341f9b11a";
+export const TCHESS_TEMPLATE = "fdabd9ebeb713568b75664c7e6db42f4871b15fe0944d07470fd9c32b42cd59a";
 
 export function newLeague(account: ComponentAddress) {
     return builder().feeTransactionPayFromComponent(account, "2000")
@@ -21,11 +22,14 @@ export function newLeague(account: ComponentAddress) {
         )
 }
 
-export function createGame(account: ComponentAddress, league: ComponentAddress) {
+export function createGame(account: ComponentAddress, league: ComponentAddress, player_a: NonFungibleAddress, player_b: NonFungibleAddress) {
     return builder().feeTransactionPayFromComponent(account, "2000")
-        .callMethod({componentAddress: league, methodName: "create_game"}, [])
-        .saveVar("player_nft")
-        .callMethod({componentAddress: account, methodName: "deposit"}, args({Workspace: "player_nft"}));
+        .callMethod({componentAddress: account, methodName: "create_proof"}, args(player_a))
+        .saveVar("player_a_proof")
+        .callMethod({
+            componentAddress: league,
+            methodName: "create_game"
+        }, args({Workspace: "player_a_proof"}, player_b));
 }
 
 export function register(account: ComponentAddress, league: ComponentAddress) {
@@ -35,7 +39,14 @@ export function register(account: ComponentAddress, league: ComponentAddress) {
         .callMethod({componentAddress: account, methodName: "deposit"}, args({Workspace: "player_nft"}));
 }
 
-function args(...args: [any]): Array<Arg> {
+export function playMove(account: ComponentAddress, game: ComponentAddress, player: NonFungibleAddress, move: number) {
+    return builder().feeTransactionPayFromComponent(account, "2000")
+        .callMethod({componentAddress: account, methodName: "create_proof"}, args(player))
+        .saveVar("player_proof")
+        .callMethod({componentAddress: game, methodName: "make_move"}, args({Workspace: "player_proof"}, move));
+}
+
+function args(...args: any[]): Array<Arg> {
     return args.map((a) => {
         if (typeof a === 'object' && 'Workspace' in a) {
             return "Workspace(" + a.Workspace + ")";

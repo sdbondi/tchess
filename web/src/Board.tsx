@@ -1,12 +1,32 @@
 import {Chessboard} from "react-chessboard";
 import {Piece, Square} from "react-chessboard/dist/chessboard/types";
 import {Chess} from "chess.js";
-import {useGameState} from "./game_state.ts";
+import {useGameState, useTariProvider} from "./game_state.ts";
+import {useEffect} from "react";
+import {ComponentHeader} from "@tari-project/typescript-bindings";
 
 
 export default function Board() {
+    let {provider} = useTariProvider();
     const gameState = useGameState();
 
+    if (!provider || !gameState.currentGameAddress) {
+        return (
+            <div id="board">
+                <div>No active game</div>
+            </div>
+        )
+    }
+
+    useEffect(() => {
+        // Need to load the game state
+        provider?.getSubstate(gameState.currentGameAddress!)
+            .then((game) => {
+                let component = game.value.Component as ComponentHeader;
+                cbor(component.body.state)
+            })
+
+    }, [provider]);
 
     function onPieceDrop(sourceSquare: Square, targetSquare: Square, piece: Piece) {
         if (!gameState.fen) {
@@ -29,9 +49,7 @@ export default function Board() {
 
     return (
         <div id="board">
-            {gameState.fen ?
-                <Chessboard id="board" position={gameState.fen} onPieceDrop={onPieceDrop}/> :
-                <div>No active game</div>}
+            <Chessboard id="board" position={gameState.fen} onPieceDrop={onPieceDrop}/>
         </div>
     )
 }

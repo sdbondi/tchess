@@ -72,20 +72,24 @@ mod tchess {
                 .mint_non_fungible(id, &Metadata::new(), &())
         }
 
-        pub fn create_game(&mut self, player_a: Proof, player_b: Proof) -> ComponentAddress {
+        pub fn create_game(
+            &mut self,
+            player_a: Proof,
+            player_b: NonFungibleId,
+        ) -> ComponentAddress {
             player_a.assert_resource(self.player_badge);
-            player_b.assert_resource(self.player_badge);
+            // player_b.assert_resource(self.player_badge);
             let player_a_id = player_a
                 .get_non_fungibles()
                 .pop_first()
                 .expect("No badge in proof");
-            let player_b_id = player_b
-                .get_non_fungibles()
-                .pop_first()
-                .expect("No badge in proof");
+            // let player_b_id = player_b
+            //     .get_non_fungibles()
+            //     .pop_first()
+            //     .expect("No badge in proof");
 
             let player_a_addr = NonFungibleAddress::new(self.player_badge, player_a_id);
-            let player_b_addr = NonFungibleAddress::new(self.player_badge, player_b_id);
+            let player_b_addr = NonFungibleAddress::new(self.player_badge, player_b);
 
             let args = if random_u32() % 2 == 0 {
                 args![player_a_addr, player_b_addr]

@@ -10,6 +10,8 @@ export interface GameState {
     setPlayerNft: (nft: NonFungibleAddress) => void,
     currentGameAddress?: ComponentAddress,
     setCurrentGameAddress: (address: ComponentAddress) => void,
+    currentGameOtherPlayer: string,
+    setCurrentGameOtherPlayer: (nft: NonFungibleAddress) => void,
     league?: ComponentAddress,
     setLeague: (address: ComponentAddress) => void,
 }
@@ -23,6 +25,8 @@ export const useGameState = create<GameState>()(
             setPlayerNft: (nft: NonFungibleAddress) => set({playerNft: nft}),
             currentGameAddress: undefined,
             setCurrentGameAddress: (address: ComponentAddress) => set({currentGameAddress: address}),
+            currentGameOtherPlayer: "",
+            setCurrentGameOtherPlayer: (nft: string) => set({currentGameOtherPlayer: nft}),
             league: undefined,
             setLeague: (address: ComponentAddress) => set({league: address}),
         }), {name: 'game-state'})
